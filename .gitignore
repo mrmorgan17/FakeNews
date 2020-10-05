@@ -42,3 +42,4 @@ vignettes/*.pdf
 submit.csv
 train.csv
 test.csv
+CleanFakeNews.csv

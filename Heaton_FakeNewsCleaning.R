@@ -10,8 +10,8 @@ library(stopwords)
 ## Read in the Data
 fakeNews.train <- read_csv("./train.csv")
 fakeNews.test <- read_csv("./test.csv")
-fakeNews <- bind_rows(train=fakeNews.train, test=fakeNews.test,
-                      .id="Set")
+fakeNews <- bind_rows(train = fakeNews.train, test = fakeNews.test,
+                      .id = "Set")
 
 ################################
 ## Create a language variable ##
@@ -19,27 +19,18 @@ fakeNews <- bind_rows(train=fakeNews.train, test=fakeNews.test,
 
 ## Determine which language each article is in
 fakeNews <- fakeNews %>%
-  mutate(language=textcat::textcat(text))
+  mutate(language = cld2::detect_language(text = text, plain_text = FALSE))
 fakeNews %>% count(language) %>%
   arrange(desc(n)) %>%
-  print(n=Inf)
-
-## Combine some languages into same category
-fakeNews <- fakeNews %>%
-  mutate(language=fct_collapse(language, 
-                               english=c("english", "middle_frisian", "scots",
-                                         "scots_gaelic", "breton", "frisian",
-                                         "manx", "catalan"),
-                               russian=c("russian-koi8_r", "russian-iso8859_5",
-                                         "russian-windows1251")))
+  print(n = Inf)
 
 ## Lump together other languages
 fakeNews <- fakeNews %>% 
-  mutate(language=fct_explicit_na(language, na_level="Missing")) %>%
-  mutate(language=fct_lump(language, n=6))
+  mutate(language = fct_explicit_na(language, na_level = "Missing")) %>%
+  mutate(language = fct_lump(language, n = 6))
 fakeNews %>% count(language) %>%
   arrange(desc(n)) %>%
-  print(n=Inf)
+  print(n = Inf)
 
 ############################################
 ## Calculate df-idf for most common words ##
@@ -47,22 +38,22 @@ fakeNews %>% count(language) %>%
 ############################################
 
 ## Create a set of stop words
-sw <- bind_rows(get_stopwords(language="en"), #English
-                get_stopwords(language="ru"), #Russian
-                get_stopwords(language="es"), #Spanish
-                get_stopwords(language="de"), #German
-                get_stopwords(language="fr")) #French
+sw <- bind_rows(get_stopwords(language = "en"), #English
+                get_stopwords(language = "ru"), #Russian
+                get_stopwords(language = "es"), #Spanish
+                get_stopwords(language = "de"), #German
+                get_stopwords(language = "fr")) #French
 sw <- sw %>%
-  bind_rows(., data.frame(word="это", lexicon="snowball"))
+  bind_rows(., data.frame(word = "это", lexicon = "snowball"))
 
 ## tidytext format
 tidyNews <- fakeNews %>%
-  unnest_tokens(tbl=., output=word, input=text)
+  unnest_tokens(tbl = ., output = word, input = text)
 
 ## Count of words in each article
 news.wc <-  tidyNews %>%
   anti_join(sw) %>% 
-  count(id, word, sort=TRUE)
+  count(id, word, sort = TRUE)
 
 ## Number of non-stop words per article
 all.wc <- news.wc %>% 
@@ -71,11 +62,11 @@ all.wc <- news.wc %>%
 
 ## Join back to original df and calculate term frequency
 news.wc <- left_join(news.wc, all.wc) %>%
-  left_join(x=., y=fakeNews %>% select(id, title))
-news.wc <- news.wc %>% mutate(tf=n/total)
+  left_join(x = ., y = fakeNews %>% select(id, title))
+news.wc <- news.wc %>% mutate(tf = n/total)
 a.doc <- sample(news.wc$title,1)
-ggplot(data=(news.wc %>% filter(title==a.doc)), aes(tf)) +
-  geom_histogram() + ggtitle(label=a.doc)
+ggplot(data = (news.wc %>% filter(title == a.doc)), aes(tf)) +
+  geom_histogram() + ggtitle(label = a.doc)
 
 ## Find the tf-idf for the most common p% of words
 word.count <- news.wc %>%
